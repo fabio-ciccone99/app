@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CONTROL TOWER</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1>CONTROL<span>·</span>TOWER</h1>
+      <div class="sub">CASSA · COMPETENZA · COSTI · PIPELINE</div>
+    </div>
+    <div class="clock">MESE CORRENTE<br><b id="curMonth">—</b><br><span id="recCount" style="color:var(--dim2)">—</span></div>
+  </header>
+
+  <div class="kpis" id="kpis"></div>
+
+  <nav id="nav">
+    <button data-v="cash" class="on"><span class="n">01</span>CASHFLOW</button>
+    <button data-v="perf"><span class="n">02</span>PERFORMANCE</button>
+    <button data-v="fcst"><span class="n">03</span>FORECAST</button>
+    <button data-v="gap"><span class="n">04</span>GAP</button>
+    <button data-v="cost"><span class="n">05</span>COSTI</button>
+    <button data-v="scen"><span class="n">06</span>SCENARIO</button>
+    <button data-v="data"><span class="n">07</span>DATI</button>
+  </nav>
+
+  <section class="view on" id="v-cash">
+    <div class="row r2">
+      <div class="card">
+        <h3>Incassi vs Costi · cassa <span class="tag">€ ENTRATI / USCITI</span></h3>
+        <div class="chartbox"><canvas id="cCash"></canvas></div>
+        <div class="legend"><span><i style="background:var(--acc)"></i>Incassi reali</span><span><i style="background:var(--red)"></i>Costi</span><span><i style="background:var(--grn)"></i>Netto</span></div>
+      </div>
+      <div class="card">
+        <h3>Liquidità periodo</h3>
+        <div class="bignum" id="cashTot" style="color:var(--acc)">—</div>
+        <div class="sub2">incassato (stato = reale)</div>
+        <div class="mg c4" style="margin-top:18px">
+          <div class="c"><div class="l">In / mese</div><div class="v" id="cashAvg">—</div></div>
+          <div class="c"><div class="l">Costo / mese</div><div class="v" id="costAvg" style="color:var(--red)">—</div></div>
+          <div class="c"><div class="l">Netto / mese</div><div class="v" id="netAvg">—</div></div>
+          <div class="c"><div class="l">Netto periodo</div><div class="v" id="netTot">—</div></div>
+        </div>
+        <div class="hint">La cassa è <b>immutabile</b>: registra quando il denaro entra. Spostare la competenza non tocca questa vista.</div>
+      </div>
+    </div>
+    <div class="row r2" style="margin-top:14px">
+      <div class="card">
+        <h3>Proiezione liquidità cumulata <span class="tag">SALDO IN BANCA</span></h3>
+        <div class="chartbox"><canvas id="cProj"></canvas></div>
+        <div class="legend"><span><i style="background:var(--blu)"></i>Saldo cassa (storico → proiezione)</span><span><i style="background:var(--red)"></i>Zero</span></div>
+      </div>
+      <div class="card">
+        <h3>Punto critico</h3>
+        <div class="bignum" id="projMin" style="color:var(--amb)">—</div>
+        <div class="sub2" id="projMinM">mese più basso della proiezione</div>
+        <div class="mg" style="margin-top:18px">
+          <div class="c"><div class="l">Saldo oggi</div><div class="v" id="projNow">—</div></div>
+          <div class="c"><div class="l">Saldo +3m</div><div class="v" id="proj3">—</div></div>
+          <div class="c"><div class="l">Saldo +6m</div><div class="v" id="proj6">—</div></div>
+        </div>
+        <div class="hint">Storico reale fino a oggi, poi sui mesi futuri il <b>maggiore tra il tuo run-rate (media 3 mesi) e la pipeline pesata</b>, meno i costi. Se la linea scende sotto zero, è lì che serve liquidità.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="v-perf">
+    <div class="row r2">
+      <div class="card">
+        <h3>Ricavi per competenza <span class="tag">€ PRODOTTI</span></h3>
+        <div class="chartbox"><canvas id="cPerf"></canvas></div>
+        <div class="legend"><span><i style="background:var(--grn)"></i>Rinnovo</span><span><i style="background:var(--blu)"></i>Pack nuovo</span><span><i style="background:var(--amb)"></i>Prodotti</span><span><i style="background:var(--red)"></i>Costi</span></div>
+      </div>
+      <div class="card">
+        <h3>Produzione reale</h3>
+        <div class="bignum" id="perfTot" style="color:var(--grn)">—</div>
+        <div class="sub2">ricavi maturati (competenza)</div>
+        <div class="mg c4" style="margin-top:18px">
+          <div class="c"><div class="l">Prod./mese</div><div class="v" id="perfAvg">—</div></div>
+          <div class="c"><div class="l">Margine/mese</div><div class="v" id="marAvg">—</div></div>
+          <div class="c"><div class="l">% Rinnovi</div><div class="v" id="perfRin">—</div></div>
+          <div class="c"><div class="l">Mese corr.</div><div class="v" id="perfCur">—</div></div>
+        </div>
+        <div class="hint">Performance vera: quanto valore eroghi mese per mese, al netto di quando incassi. Margine = competenza − costi.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="v-fcst">
+    <div class="row r1" style="margin-bottom:14px">
+      <div class="mg">
+        <div class="c" style="padding:18px"><div class="l">Pipeline +1 mese</div><div class="v" id="f1" style="color:var(--blu)">—</div><div class="sub2" id="f1w">—</div></div>
+        <div class="c" style="padding:18px"><div class="l">Pipeline +3 mesi</div><div class="v" id="f3" style="color:var(--blu)">—</div><div class="sub2" id="f3w">—</div></div>
+        <div class="c" style="padding:18px"><div class="l">Pipeline +6 mesi</div><div class="v" id="f6" style="color:var(--blu)">—</div><div class="sub2" id="f6w">—</div></div>
+      </div>
+    </div>
+    <div class="row r2">
+      <div class="card">
+        <h3>Forecast incassi futuri <span class="tag">PESATO × PROB.</span></h3>
+        <div class="chartbox"><canvas id="cFcst"></canvas></div>
+        <div class="legend"><span><i style="background:rgba(78,168,255,.35)"></i>Previsto lordo</span><span><i style="background:var(--blu)"></i>Pesato</span><span><i style="background:var(--red)"></i>Costi</span></div>
+      </div>
+      <div class="card">
+        <h3>Pipeline aperta</h3>
+        <div style="max-height:320px;overflow:auto" id="fcstTable"></div>
+        <div class="hint">I rinnovi auto-generati dai pack registrati compaiono qui. Convertili quando incassi.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="v-gap">
+    <div class="row r1" style="margin-bottom:14px">
+      <div class="card">
+        <h3>Stock di ricavi venduti e non ancora maturati <span class="tag">DEFERRED REVENUE</span></h3>
+        <div class="bignum" id="stockTot" style="color:var(--amb)">—</div>
+        <div class="sub2">denaro già in cassa con competenza nei mesi futuri — valore già venduto, ancora da erogare</div>
+      </div>
+    </div>
+    <div class="row r2">
+      <div class="card">
+        <h3>Cassa vs Competenza <span class="tag">TIMING</span></h3>
+        <div class="chartbox"><canvas id="cGap"></canvas></div>
+        <div class="legend"><span><i style="background:var(--acc)"></i>Cassa</span><span><i style="background:var(--grn)"></i>Competenza</span></div>
+      </div>
+      <div class="card">
+        <h3>Gap per mese</h3>
+        <div style="max-height:300px;overflow:auto" id="gapTable"></div>
+        <div class="hint">Gap positivo = incassato più di quanto maturato (anticipo). Negativo = stai erogando valore già incassato prima.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="v-cost">
+    <div class="card">
+      <h3>Costi mensili <span class="tag">TUTTO INCLUSO</span></h3>
+      <div class="hint" style="margin-top:0;margin-bottom:14px">Default per anno: 2026 = €21.300 · 2027 = €18.000 · 2028 = €16.500 (2029 da definire, uso 16.500). Sovrascrivi un mese per renderlo specifico.</div>
+      <div style="max-height:420px;overflow:auto" id="costTable"></div>
+    </div>
+  </section>
+
+  <section class="view" id="v-scen">
+    <div class="row r2" style="margin-bottom:14px">
+      <div class="card">
+        <h3>Liquidità cumulata: baseline vs scenario <span class="tag">2026 → 2029</span></h3>
+        <div class="chartbox"><canvas id="cScen"></canvas></div>
+        <div class="legend"><span><i style="background:var(--dim2)"></i>Baseline</span><span><i style="background:var(--grn)"></i>Scenario</span><span><i style="background:var(--red)"></i>Zero</span></div>
+      </div>
+      <div class="card">
+        <h3>Effetto scenario</h3>
+        <div class="bignum" id="scMin" style="color:var(--amb)">—</div>
+        <div class="sub2" id="scMinM">punto critico scenario</div>
+        <div class="mg" style="margin-top:18px" id="scYearEnds"></div>
+        <div style="margin-top:14px;padding:12px;background:var(--panel2);border-left:3px solid var(--grn)">
+          <div class="l" style="font-size:9.5px;letter-spacing:1.2px;color:var(--dim2);text-transform:uppercase">Differenza vs baseline a fine 2029</div>
+          <div class="v" id="scDelta" style="font-family:'Archivo';font-weight:800;font-size:26px;margin-top:4px;color:var(--grn)">—</div>
+          <div class="sub2" id="scNote">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row r1" style="margin-bottom:14px">
+      <div class="card">
+        <h3>Ipotesi per anno <span class="tag">INCASSI · TAGLI</span></h3>
+        <div id="yearTable"></div>
+        <div class="hint"><b>Incassi %</b> = quota del tuo run-rate che ipotizzi per quell'anno (100% = come ora, 110% = crescita). <b>Taglio €/mese</b> = riduzione costi applicata a ogni mese dell'anno. Il saldo di fine anno si aggiorna mentre scrivi.</div>
+      </div>
+    </div>
+
+    <div class="row" style="grid-template-columns:repeat(2,1fr)">
+      <div class="card">
+        <h3>Iniezioni di liquidità <span class="tag">+ CASSA UNA TANTUM</span></h3>
+        <div class="form" style="grid-template-columns:1.2fr .8fr .8fr auto">
+          <div class="fld"><label>Causale</label><input id="inj-lab" placeholder="es. MCC"></div>
+          <div class="fld"><label>Importo €</label><input id="inj-eur" type="number" placeholder="24600"></div>
+          <div class="fld"><label>Mese</label><input id="inj-m" type="month"></div>
+          <div class="fld"><button class="btn" id="injAdd">+</button></div>
+        </div>
+        <div id="injList" style="margin-top:10px"></div>
+      </div>
+
+      <div class="card">
+        <h3>Rimanda costi <span class="tag">SPOSTA USCITA</span></h3>
+        <div class="form" style="grid-template-columns:.8fr .8fr .8fr auto">
+          <div class="fld"><label>Importo €</label><input id="def-eur" type="number" placeholder="3000"></div>
+          <div class="fld"><label>Dal mese</label><input id="def-da" type="month"></div>
+          <div class="fld"><label>Al mese</label><input id="def-a" type="month"></div>
+          <div class="fld"><button class="btn" id="defAdd">+</button></div>
+        </div>
+        <div id="defList" style="margin-top:10px"></div>
+        <div class="hint">Toglie l'uscita dal mese di partenza e la rimette nel mese di destinazione.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="v-data">
+    <div class="card" style="margin-bottom:14px">
+      <h3>Saldo iniziale di cassa <span class="tag">PUNTO DI PARTENZA</span></h3>
+      <div class="form" style="grid-template-columns:repeat(3,1fr)">
+        <div class="fld"><label>Mese di riferimento</label><input id="o-mese" type="month"></div>
+        <div class="fld"><label>Cassa a inizio mese €</label><input id="o-val" type="number" step="100" placeholder="9970"></div>
+        <div class="fld"><button class="btn" id="openBtn">Imposta</button></div>
+      </div>
+      <div class="hint">È la liquidità reale in banca all'inizio di quel mese. Da qui parte la proiezione cumulata nella vista CASHFLOW.</div>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <h3>Nuovo movimento</h3>
+      <div class="form">
+        <div class="fld"><label>Cliente</label><input id="i-cli" type="text" placeholder="cognome"></div>
+        <div class="fld"><label>Ramo</label><input id="i-ramo" list="rami" type="text" placeholder="es. well"><datalist id="rami"></datalist></div>
+        <div class="fld"><label>Importo €</label><input id="i-imp" type="number" step="10" placeholder="560"></div>
+        <div class="fld"><label>Metodo</label><input id="i-met" list="metodi" type="text" placeholder="es. DIL"><datalist id="metodi"><option>Contanti</option><option>Carta</option><option>Bonifico</option><option>DIL</option><option>Qomodo</option><option>Satispay</option></datalist></div>
+        <div class="fld"><label>Tipo</label><select id="i-tipo"><option value="pack">Nuovo pack</option><option value="rinnovo">Già cliente (rinnovo)</option><option value="prodotti">Prodotti</option></select></div>
+        <div class="fld"><label>Stato</label><select id="i-stato"><option value="reale">Reale</option><option value="previsto">Previsto</option></select></div>
+        <div class="fld"><label>Data cassa</label><input id="i-data" type="date"></div>
+        <div class="fld"><label>Mese competenza</label><input id="i-comp" type="month"></div>
+        <div class="fld" id="rinnWrap"><label>Rinnova tra (mesi)</label><input id="i-rinn" type="number" min="0" placeholder="es. 3 · 0=no"></div>
+        <div class="fld" id="probWrap" style="display:none"><label>Probabilità %</label><input id="i-prob" type="number" min="0" max="100" value="70"></div>
+        <div class="fld"><button class="btn" id="addBtn">+ Aggiungi</button></div>
+      </div>
+      <div class="hint">Competenza = mese corrente di default (modificabile). Se imposti "rinnova tra N mesi", creo io il previsionale di rinnovo futuro.</div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <h3>Importa righe <span class="tag">RAMO · IMPORTO · METODO · CLIENTE</span></h3>
+      <textarea id="pasteBox" rows="4" placeholder="Incolla qui (una riga per movimento, separato da TAB o spazi):&#10;well	560	DIL	guarriello"></textarea>
+      <div class="toolbar" style="margin-top:10px">
+        <div class="fld" style="max-width:170px"><label>Mese del batch</label><input id="batchMonth" type="month"></div>
+        <button class="btn" id="parseBtn" style="align-self:flex-end">Analizza</button>
+      </div>
+      <div id="reviewBox"></div>
+    </div>
+
+    <div class="card">
+      <h3>Movimenti <span class="tag" id="dataCount">0</span></h3>
+      <div class="toolbar">
+        <button class="gho" id="seedBtn">Dati esempio</button>
+        <button class="gho" id="exportBtn">Esporta JSON</button>
+        <button class="gho" id="importBtn">Importa JSON</button>
+        <input type="file" id="fileIn" accept=".json" style="display:none">
+        <div class="sp"></div>
+        <button class="gho" id="clearBtn" style="border-color:var(--red);color:var(--red)">Svuota tutto</button>
+      </div>
+      <div style="max-height:420px;overflow:auto" id="dataTable"></div>
+    </div>
+  </section>
+</div>
+
+<dialog id="moveDlg">
+  <h4>Sposta competenza</h4>
+  <div id="moveBody"></div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+    <button class="gho" onclick="document.getElementById('moveDlg').close()">Annulla</button>
+    <button class="btn" id="moveSave">Salva</button>
+  </div>
+</dialog>
+<script src="app.js"></script>
+</body>
+</html>
