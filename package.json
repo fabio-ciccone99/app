@@ -1,0 +1,13 @@
+{
+  "name": "control-tower",
+  "version": "1.0.0",
+  "description": "Control Tower web dashboard",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
