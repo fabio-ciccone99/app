@@ -27,7 +27,7 @@ public class MainActivity extends Activity {
     private File videoDir;
     private List<File> playlist = new ArrayList<>();
     private int index = 0;
-    private UploadServer server;
+    private CloudSync cloudSync;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -51,8 +51,10 @@ public class MainActivity extends Activity {
         player.setOnCompletionListener(mp -> { index++; playCurrent(); });
         player.setOnErrorListener((mp, what, extra) -> { index++; player.postDelayed(this::playCurrent, 800); return true; });
 
-        try { server = new UploadServer(8080, videoDir, this::reloadPlaylist); server.start(); }
-        catch (Exception e) { status.setText("Server non avviato: " + e.getMessage()); }
+        cloudSync = new CloudSync(videoDir, this::reloadPlaylist, message -> runOnUiThread(() -> {
+            if (playlist.isEmpty()) { status.setVisibility(View.VISIBLE); status.setText(message); }
+        }));
+        cloudSync.start();
         reloadPlaylist();
     }
 
@@ -62,7 +64,7 @@ public class MainActivity extends Activity {
             playlist = UploadServer.orderedVideos(videoDir);
             if (playlist.isEmpty()) {
                 player.stopPlayback(); status.setVisibility(View.VISIBLE);
-                status.setText("VIDEO TV VERTICALE\n\nDal PC collegato allo stesso Wi-Fi apri:\nhttp://" + localIp() + ":8080\n\nCarica uno o più video MP4");
+                status.setText("VIDEO TV VERTICALE\n\nSincronizzazione online in corso…\n\nCarica i video da:\nhttps://video-tv-cloud.fabcic-7616.chatgpt.site");
             } else {
                 index = current == null ? 0 : Math.max(0, playlist.indexOf(current));
                 playCurrent();
@@ -100,5 +102,5 @@ public class MainActivity extends Activity {
         return super.dispatchKeyEvent(e);
     }
 
-    @Override protected void onDestroy() { if (server != null) server.stop(); super.onDestroy(); }
+    @Override protected void onDestroy() { if (cloudSync != null) cloudSync.stop(); super.onDestroy(); }
 }
